@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8"/>
+        <style>
+            html * {
+                font-size: 125%;
+            }
+            img.card {
+                width: 12vw;
+                display: inline-block;
+                padding: 0.12em;
+            }
+            body {
+                font-family: 'sans-serif';
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Blackjack</h1>
+        <button id="dealButton">Deal</button>
+        <h2>Player's Hand</h2>
+        <div id="playerDeck"></div>
+        <h2>House's Hand</h2>
+        <div id="opponentDeck"></div>
+        <script lang="javascript">
+            "use strict";
+            function $(id) {
+                return document.getElementById(id);
+            }
+            var playerDeckView = undefined;
+            var opponentDeckView = undefined;
+            var gameState = undefined;
+            class AssetManager {
+                static getCardImagePath(card) {
+                    //name,suit,color
+                    let basePath = "/assets/cards";
+                    return `${basePath}/${Card.CARD_NAME_CODES[card.cardName]}${Card.SUIT_NAME_CODES[card.suitName]}${Card.COLOR_NAME_CODES[card.colorName]}.svg`;
+                }
+            }
+            class CardDeckView {
+                rootElem=undefined;
+                playerCards=undefined;
+                constructor(selector,cards) {
+                    this.rootElem = $(selector);
+                    this.playerCards = cards;
+                }
+                clearCards() {
+                    this.playerCards = [];
+                    while (this.rootElem.firstChild) {
+                        this.rootElem.removeChild(this.rootElem.firstChild);
+                    }
+                }
+                addCard(card) {
+                    this.playerCards.push(card);
+                    var imgElem = new Image();
+                    imgElem.className = "card";
+                    imgElem.src = AssetManager.getCardImagePath(card);
+                    imgElem.ondragstart = ()=> {return false;};
+                    //imgElem.alt = card.name;
+                    this.rootElem.appendChild(imgElem);
+                }
+            }
+            class Card {
+                static CARD_NAME_CODES = {"Ace":"a", "King":"k", "Queen":"q", "Jack":"j",
+                    "Ten":"10", "Nine":"9", "Eight":"8", "Seven":"7", "Six":"6", "Five":"5", 
+                    "Four":"4", "Three":"3", "Two":"2" };
+                static SUIT_NAME_CODES = {"Diamonds":"d","Hearts":"h","Clubs":"c","Spades":"s"};
+                static COLOR_NAME_CODES = {"Red":"r","Black":"b"};
+                static ALLOWED_SUIT_COLORS = [0,0,1,1];
+                static NUM_CARD_NAMES = Object.keys(Card.CARD_NAME_CODES).length;
+                static NUM_CARD_SUITS = Object.keys(Card.SUIT_NAME_CODES).length;
+                static NUM_CARD_COLORS = Object.keys(Card.COLOR_NAME_CODES).length;
+                /*
+                var CARD_NAME_CODES = {"Ace":"a", "King":"k", "Queen":"q", "Jack":"j",
+                    "Ten":"10", "Nine":"9", "Eight":"8", "Seven":"7", "Six":"6", "Five":"5", 
+                    "Four":"4", "Three":"3", "Two":"2", "One":"1" };
+                var SUIT_NAME_CODES = {"Diamonds":"d","Hearts":"h","Clubs":"c","Spades":"s"};
+                var CARD_COLOR_CODES = {"Red":"r","Black":"b"};
+                */
+                //4,3,1
+                //nnnnsssc
+                suitName;
+                cardName;
+                colorName;
+                name() {
+                    return `${this.colorName} ${this.cardName} of ${this.suitName}`;
+                }
+                constructor(cardName, suitName, colorName) {
+                    this.cardName = cardName;
+                    this.suitName = suitName;
+                    this.colorName = colorName;
+                }
+            }
+            class GameState
+            {
+                playerCards=[];
+                oppCards=[];
+            }
+            function randomCardId() {
+                
+                var currentId = undefined;
+                currentId = 
+                    Math.floor( Math.random() * Card.NUM_CARD_NAMES  ) << 4 |
+                    Math.floor( Math.random() * Card.NUM_CARD_SUITS  ) << 1;
+                currentId = currentId | Card.ALLOWED_SUIT_COLORS[(currentId & 0xf) >> 1]
+                return currentId;
+            }
+            function dealHouseCards(houseDeckView) {
+                opponentDeckView
+            }
+            function dealPlayerCards(playerDeckView) {
+                playerDeckView.clearCards();
+                var cardIds = [];
+                var currentId = 0;
+                let DEAL_NUM_CARDS = 7;
+                for (var i=0; i < DEAL_NUM_CARDS; ++i) {
+                    do {
+                        currentId = randomCardId();
+                    } while (cardIds.indexOf(currentId) != -1)
+                    cardIds.push(currentId);
+                        var nameId = currentId >> 4;
+                        var suitId = (currentId & 0xf) >> 1;
+                        var colorId = (currentId & 0xf & 0x1);
+                        var card = new Card(
+                            Object.keys(Card.CARD_NAME_CODES)[nameId],
+                            Object.keys(Card.SUIT_NAME_CODES)[suitId],
+                            Object.keys(Card.COLOR_NAME_CODES)[colorId]
+                        );
+                        playerDeckView.addCard(card);
+                }
+            }
+            document.onreadystatechange = () => {
+                gameState = new GameState();
+                playerDeckView = new CardDeckView("playerDeck",gameState.playerCards);
+                opponentDeckView = new CardDeckView("opponentDeck",gameState.oppCards);
+                $("dealButton").addEventListener("click", (e)=>{
+                    dealPlayerCards(playerDeckView);
+                    dealHouseCards(opponentDeckView);
+                });
+            }
+        </script>
+    </body>
+</html>
