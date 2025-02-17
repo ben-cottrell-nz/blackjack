@@ -7,14 +7,17 @@
                 font-size: 125%;
             }
             .card {
-                width: 12vw;
+                width: 120px;
+                height: 180px;
                 display: inline-block;
                 padding: 0.12em;
+                background-image: url("assets/spritesheet.png")
             }
             body {
                 font-family: 'sans-serif';
             }
         </style>
+        <link rel="stylesheet" href="/assets/cardsprites.css"/>
     </head>
     <body>
         <h1>Blackjack</h1>
@@ -32,10 +35,9 @@
             var opponentDeckView = undefined;
             var gameState = undefined;
             class AssetManager {
-                static getCardImagePath(card) {
+                static getCardStyleClassName(card) {
                     //name,suit,color
-                    let basePath = "/assets/cards";
-                    return `${basePath}/${card.assetName()}.svg`;
+                    return `_${card.assetName()}`;
                 }
             }
             class CardDeckView {
@@ -53,12 +55,9 @@
                 }
                 addCard(card) {
                     this.playerCards.push(card);
-                    var imgElem = new Image();
-                    imgElem.className = "card";
-                    imgElem.src = AssetManager.getCardImagePath(card);
-                    imgElem.ondragstart = ()=> {return false;};
-                    //imgElem.alt = card.name;
-                    this.rootElem.appendChild(imgElem);
+                    var cardElem = document.createElement("div");
+                    cardElem.className = "card " + AssetManager.getCardStyleClassName(card);
+                    this.rootElem.appendChild(cardElem);
                 }
             }
             class Card {

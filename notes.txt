@@ -1,0 +1,10 @@
+python:
+table=""
+for y in range(0,9):
+    for x in range(0,6):
+        table += str.format("{}px {}px;",-8+(-120-16)*x,-8+(-180-16)*y)
+    table += "\n"
+print(table)
+
+js:
+for x in cards/*.svg; do basename $x | sed 's/\.svg//gi' | awk '{print "._"$1"{\n\tbackground-position: ;\n}"}' >> cardsprites.css; done
