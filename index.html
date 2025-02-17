@@ -6,7 +6,7 @@
             html * {
                 font-size: 125%;
             }
-            img.card {
+            .card {
                 width: 12vw;
                 display: inline-block;
                 padding: 0.12em;
@@ -35,7 +35,7 @@
                 static getCardImagePath(card) {
                     //name,suit,color
                     let basePath = "/assets/cards";
-                    return `${basePath}/${Card.CARD_NAME_CODES[card.cardName]}${Card.SUIT_NAME_CODES[card.suitName]}${Card.COLOR_NAME_CODES[card.colorName]}.svg`;
+                    return `${basePath}/${card.assetName()}.svg`;
                 }
             }
             class CardDeckView {
@@ -65,52 +65,88 @@
                 static CARD_NAME_CODES = {"Ace":"a", "King":"k", "Queen":"q", "Jack":"j",
                     "Ten":"10", "Nine":"9", "Eight":"8", "Seven":"7", "Six":"6", "Five":"5", 
                     "Four":"4", "Three":"3", "Two":"2" };
+                static CARD_NAME_SCORES = {"Ace":1, "King":10, "Queen":10, "Jack":10,
+                    "Ten":10, "Nine":9, "Eight":8, "Seven":7, "Six":6, "Five":5, 
+                    "Four":4, "Three":3, "Two":2 };
                 static SUIT_NAME_CODES = {"Diamonds":"d","Hearts":"h","Clubs":"c","Spades":"s"};
                 static COLOR_NAME_CODES = {"Red":"r","Black":"b"};
                 static ALLOWED_SUIT_COLORS = [0,0,1,1];
                 static NUM_CARD_NAMES = Object.keys(Card.CARD_NAME_CODES).length;
                 static NUM_CARD_SUITS = Object.keys(Card.SUIT_NAME_CODES).length;
                 static NUM_CARD_COLORS = Object.keys(Card.COLOR_NAME_CODES).length;
-                /*
-                var CARD_NAME_CODES = {"Ace":"a", "King":"k", "Queen":"q", "Jack":"j",
-                    "Ten":"10", "Nine":"9", "Eight":"8", "Seven":"7", "Six":"6", "Five":"5", 
-                    "Four":"4", "Three":"3", "Two":"2", "One":"1" };
-                var SUIT_NAME_CODES = {"Diamonds":"d","Hearts":"h","Clubs":"c","Spades":"s"};
-                var CARD_COLOR_CODES = {"Red":"r","Black":"b"};
-                */
+                //Bit layout for card value:
                 //4,3,1
                 //nnnnsssc
-                suitName;
-                cardName;
-                colorName;
-                name() {
-                    return `${this.colorName} ${this.cardName} of ${this.suitName}`;
+                cardValue;
+                cardName() {
+                    var nameId = this.cardValue >> 4;
+                    return Card.CARD_NAME_CODES[Object.keys(Card.CARD_NAME_CODES)[nameId]];
                 }
-                constructor(cardName, suitName, colorName) {
-                    this.cardName = cardName;
-                    this.suitName = suitName;
-                    this.colorName = colorName;
+                suitName() {
+                    var suitId = (this.cardValue & 0xf) >> 1;
+                    return Card.SUIT_NAME_CODES[Object.keys(Card.SUIT_NAME_CODES)[suitId]];
+                }
+                colorName() {
+                    var suitId = (this.cardValue & 0xf) >> 1;
+                    return ( Card.COLOR_NAME_CODES[ 
+                        Object.keys(Card.COLOR_NAME_CODES)[Card.ALLOWED_SUIT_COLORS[suitId]]
+                    ]);
+                }
+                assetName() {
+                    return `${this.cardName()}${this.suitName()}${this.colorName()}`;
+                }
+                constructor(cardValue) {
+                    this.cardValue = cardValue;
                 }
             }
             class GameState
             {
                 playerCards=[];
                 oppCards=[];
+                static exclLowerId = Object.keys(Card.CARD_NAME_CODES).indexOf("King");
+                static exclUpperId = Object.keys(Card.CARD_NAME_CODES).indexOf("Jack");
+                checkWinner() {
+                    var playerScore = 0;
+                    var oppScore = 0;
+                    this.playerCards.forEach(e => {
+                        var nameId = currentId >> 4;
+                        playerScore += Card.CARD_NAME_SCORES[nameId];
+                    });
+                    this.oppCards.forEach(e => {
+                        var nameId = currentId >> 4;
+                        oppScore += Card.CARD_NAME_SCORES[nameId];
+                    });
+                    if (playerScore > oppScore && playerScore <= 21) {
+                        alert("Player Wins");
+                    } else if (oppScore < playerScore && oppScore <= 21) {
+                        alert("House Wins");
+                    }
+                }
+            }
+            function crng() {
+                var tempArray = new Uint32Array(52);
+                self.crypto.getRandomValues(tempArray);
+                return tempArray[Math.floor(Math.random() * tempArray.length)] / 0xffffffff;
             }
             function randomCardId() {
-                
                 var currentId = undefined;
+                Math.random();
+                var nameId = Math.floor( crng() * Card.NUM_CARD_NAMES  );
+                /*
+                In Blackjack, face value cards are allowed.
+                do {
+                    nameId = Math.floor( crng() * Card.NUM_CARD_NAMES  );
+                } while (nameId >= GameState.exclLowerId
+                    && nameId <= GameState.exclUpperId)
+                    */
                 currentId = 
-                    Math.floor( Math.random() * Card.NUM_CARD_NAMES  ) << 4 |
-                    Math.floor( Math.random() * Card.NUM_CARD_SUITS  ) << 1;
-                currentId = currentId | Card.ALLOWED_SUIT_COLORS[(currentId & 0xf) >> 1]
+                    nameId << 4 |
+                    Math.floor( crng() * Card.NUM_CARD_SUITS  ) << 1;
+                currentId = currentId | Card.ALLOWED_SUIT_COLORS[(currentId & 0xf) >> 1];
                 return currentId;
             }
-            function dealHouseCards(houseDeckView) {
-                opponentDeckView
-            }
-            function dealPlayerCards(playerDeckView) {
-                playerDeckView.clearCards();
+            function dealCards(deckView) {
+                deckView.clearCards();
                 var cardIds = [];
                 var currentId = 0;
                 let DEAL_NUM_CARDS = 7;
@@ -119,15 +155,8 @@
                         currentId = randomCardId();
                     } while (cardIds.indexOf(currentId) != -1)
                     cardIds.push(currentId);
-                        var nameId = currentId >> 4;
-                        var suitId = (currentId & 0xf) >> 1;
-                        var colorId = (currentId & 0xf & 0x1);
-                        var card = new Card(
-                            Object.keys(Card.CARD_NAME_CODES)[nameId],
-                            Object.keys(Card.SUIT_NAME_CODES)[suitId],
-                            Object.keys(Card.COLOR_NAME_CODES)[colorId]
-                        );
-                        playerDeckView.addCard(card);
+                    var card = new Card(currentId);
+                    deckView.addCard(card);
                 }
             }
             document.onreadystatechange = () => {
@@ -135,8 +164,9 @@
                 playerDeckView = new CardDeckView("playerDeck",gameState.playerCards);
                 opponentDeckView = new CardDeckView("opponentDeck",gameState.oppCards);
                 $("dealButton").addEventListener("click", (e)=>{
-                    dealPlayerCards(playerDeckView);
-                    dealHouseCards(opponentDeckView);
+                    dealCards(playerDeckView);
+                    dealCards(opponentDeckView);
+                    gameState.checkWinner();
                 });
             }
         </script>
