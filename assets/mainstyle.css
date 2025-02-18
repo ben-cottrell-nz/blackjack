@@ -1,0 +1,20 @@
+html * {
+    font-size: 125%;
+    color: #e2e2e2;
+}
+html {
+    background: radial-gradient(lawngreen, green);
+}
+button {
+    color: black;
+}
+.card {
+    width: 120px;
+    height: 180px;
+    display: inline-block;
+    padding: 0.12em;
+    background-image: url("spritesheet-a.png")
+}
+body {
+    font-family: 'sans-serif';
+}
