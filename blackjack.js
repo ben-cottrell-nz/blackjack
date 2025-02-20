@@ -9,6 +9,9 @@ function $(id) {
 var playerDeckView = undefined;
 var opponentDeckView = undefined;
 var gameState = undefined;
+var newGameButton = undefined;
+var takeButton = undefined;
+var passButton = undefined;
 class CardDeckView {
     rootElem = undefined;
     gameState = undefined;
@@ -88,11 +91,60 @@ class Card {
     }
 }
 class GameState {
+    gameOver=true;
     playerCards = {};
-    static checkwinner_call_count = 0;
+    playerDeckViews = {};
+    playerIdTurn=0;
+    playerWinner=undefined;
+    startNewGame() {
+        playerCards = {};
+        playerIdTurn = 0;
+        gameOver = false;
+        playerWinner = undefined;
+        if (Object.keys(this.playerDeckViews).length != 0) {
+            Object.values.forEach(e => {
+                e.clearCards();
+            });
+        };
+        takeButton.disabled = false;
+        passButton.disabled = false;
+    }
+    playerTakeCards(playerId) {
+        if (playerId == playerIdTurn) {
+            dealCards(
+                this.playerDeckViews[Object.keys(this.playerDeckViews)[playerIdTurn]],
+                2);
+            this.nextTurn();
+        }
+    }
+    playerPass(playerId) {
+        if (playerId == playerIdTurn) {
+            this.nextTurn();
+        }
+    }
+    nextTurn() {
+        var result = checkWinner();
+        if (result === undefined) {
+            if (this.playerIdTurn < Object.keys(playerDeckViews).length) {
+                playerIdTurn += 1;
+            } else {
+                playerIdTurn = 0;
+            }
+        } else {
+            if (result.message === undefined) {
+                alert(`${result.name} wins with a score of ${result.score}`);
+            } else {
+                alert(`${result.message}`);
+            }
+            onGameOver();
+        }
+    }
+    onGameOver() {
+        this.gameOver = true;
+        takeButton.disabled = true;
+        passButton.disabled = true;
+    }
     checkWinner() {
-        GameState.checkwinner_call_count += 1;
-        if (this.checkWinner > 1) return;
         var playerScores = new Array(Object.keys(this.playerCards).length);
         var oppScore = 0;
         var highScore = 0;
@@ -104,19 +156,16 @@ class GameState {
                 playerScores[i][1] += e.scoreValue();
             });
         });
-        //console.log(GameState.checkwinner_call_count);
-        //console.log("High score: " + playerScores.sort((a,b)=> a[1]<b[1])[0])
         var topScores = playerScores.sort((a,b)=> a[1]<b[1]);
         console.log(topScores);
         for (var i=0; i < topScores.length; i++) {
             if (i < topScores.length - 1) {
                 if (topScores[i][1] == topScores[i+1][1]) {
-                    console.log(`It's a draw between ${topScores[i][0]} and ${topScores[i+1][0]}`);
+                    return {message:`It's a draw between ${topScores[i][0]} and ${topScores[i+1][0]}`};
                 }
             }
             if (topScores[i][1] <= 21) {
-                console.log(`${topScores[i][0]} wins: ${topScores[i][1]}`);
-                break;
+                return {name:topScores[i][0],score:topScores[i][1]};
             }
         }
     }
@@ -131,12 +180,11 @@ function randomCard() {
         Math.floor(crng() * Card.NUM_CARD_SUITS));
     return currentCard;
 }
-function dealCards(deckView) {
+function dealCards(deckView, numCards) {
     deckView.clearCards();
     var cards = [];
     var currentCard = undefined;
-    let DEAL_NUM_CARDS = 3;
-    for (var i = 0; i < DEAL_NUM_CARDS; ++i) {
+    for (var i = 0; i < numCards; ++i) {
         do {
             currentCard = randomCard();
         } while (cards.indexOf(currentCard) != -1)
@@ -146,11 +194,23 @@ function dealCards(deckView) {
 }
 document.onreadystatechange = () => {
     gameState = new GameState();
+    var player1Name = "Player1";
+    var houseName = "House"
     playerDeckView = new CardDeckView("playerDeck", gameState, "Player1");
     opponentDeckView = new CardDeckView("opponentDeck", gameState, "House");
-    $("dealButton").addEventListener("click", (e) => {
-        dealCards(playerDeckView);
-        dealCards(opponentDeckView);
-        //gameState.checkWinner();
+    gameState.playerDeckViews[player1Name] = playerDeckView;
+    gameState.playerDeckViews[houseName] = opponentDeckView;
+    newGameButton = $("newGameButton");
+    newGameButton.addEventListener("click", e => {
+        gameState.startNewGame();
     });
+    takeButton = $("takeButton");
+    takeButton.addEventListener("click", e => {
+        gameState.playerTakeCards(0);
+    });
+    passButton = $("passButton");    
+    passButton.addEventListener("click", e => {
+        gameState.playerPass(0);
+    });
+    gameState.onGameOver();
 }
