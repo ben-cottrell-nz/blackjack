@@ -4,7 +4,7 @@
 */
 "use strict";
 function $(id) {
-    return document.getElementById(id);
+    return document.body.querySelector(id);
 }
 var playerDeckView = undefined;
 var opponentDeckView = undefined;
@@ -12,6 +12,7 @@ var gameState = undefined;
 var newGameButton = undefined;
 var takeButton = undefined;
 var passButton = undefined;
+var gameStatusText = undefined;
 class CardDeckView {
     rootElem = undefined;
     gameState = undefined;
@@ -83,7 +84,11 @@ class Card {
         ]);
     }
     assetName() {
-        return `${this.cardName()}${this.suitName()}${this.colorName()}`;
+        if (cardValue != 0xffffffff) {
+            return `${this.cardName()}${this.suitName()}${this.colorName()}`;
+        } else {
+            return 
+        }
     }
     constructor(nameId, suitId) {
         this.cardValue = (nameId << 4) | (suitId << 1);
@@ -97,38 +102,47 @@ class GameState {
     playerIdTurn=0;
     playerWinner=undefined;
     startNewGame() {
-        playerCards = {};
-        playerIdTurn = 0;
-        gameOver = false;
-        playerWinner = undefined;
+        this.playerCards = {};
+        this.playerIdTurn = 0;
+        this.gameOver = false;
+        this.playerWinner = undefined;
         if (Object.keys(this.playerDeckViews).length != 0) {
-            Object.values.forEach(e => {
+            Object.values(this.playerDeckViews).forEach(e => {
                 e.clearCards();
             });
         };
+        this.playerTakeCards(0);
         takeButton.disabled = false;
         passButton.disabled = false;
     }
     playerTakeCards(playerId) {
-        if (playerId == playerIdTurn) {
+        if (playerId == this.playerIdTurn) {
             dealCards(
-                this.playerDeckViews[Object.keys(this.playerDeckViews)[playerIdTurn]],
+                this.playerDeckViews[
+                    Object.keys(this.playerDeckViews)[this.playerIdTurn]
+                ],
                 2);
-            this.nextTurn();
         }
     }
     playerPass(playerId) {
-        if (playerId == playerIdTurn) {
+        if (playerId == this.playerIdTurn) {
             this.nextTurn();
         }
     }
+    npTurn() {
+        var result = crng() * 30;
+        if (result < 15) {  }
+    }
     nextTurn() {
-        var result = checkWinner();
+        var result = this.checkWinner();
         if (result === undefined) {
             if (this.playerIdTurn < Object.keys(playerDeckViews).length) {
-                playerIdTurn += 1;
+                this.playerIdTurn += 1;
+                if (playerIdTurn == 1) {
+                    this.npTurn();    
+                }
             } else {
-                playerIdTurn = 0;
+                this.playerIdTurn = 0;
             }
         } else {
             if (result.message === undefined) {
@@ -196,21 +210,23 @@ document.onreadystatechange = () => {
     gameState = new GameState();
     var player1Name = "Player1";
     var houseName = "House"
-    playerDeckView = new CardDeckView("playerDeck", gameState, "Player1");
-    opponentDeckView = new CardDeckView("opponentDeck", gameState, "House");
+    playerDeckView = new CardDeckView("#playerDeck", gameState, "Player1");
+    opponentDeckView = new CardDeckView("#opponentDeck", gameState, "House");
     gameState.playerDeckViews[player1Name] = playerDeckView;
     gameState.playerDeckViews[houseName] = opponentDeckView;
-    newGameButton = $("newGameButton");
+    newGameButton = $("#newGameButton");
     newGameButton.addEventListener("click", e => {
         gameState.startNewGame();
     });
-    takeButton = $("takeButton");
+    takeButton = $("#takeButton");
     takeButton.addEventListener("click", e => {
         gameState.playerTakeCards(0);
+        gameState.nextTurn();
     });
-    passButton = $("passButton");    
+    passButton = $("#passButton");    
     passButton.addEventListener("click", e => {
         gameState.playerPass(0);
     });
+    gameStatusText = $("#gameStatusText");
     gameState.onGameOver();
 }
