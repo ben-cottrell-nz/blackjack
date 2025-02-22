@@ -17,11 +17,13 @@ class CardDeckView {
     rootElem = undefined;
     gameState = undefined;
     playerName = "";
-    constructor(selector, gameState, playerName) {
+    hideCards = false;
+    constructor(selector, gameState, playerName, hideCards) {
         this.rootElem = $(selector);
         this.playerName = playerName;
         this.gameState = gameState;
         this.gameState.playerCards[this.playerName] = [];
+        this.hideCards = hideCards;
     }
     clearCards() {
         this.gameState.playerCards[this.playerName] = [];
@@ -32,7 +34,11 @@ class CardDeckView {
     addCard(card) {
         this.gameState.playerCards[this.playerName].push(card);
         var cardElem = document.createElement("div");
-        cardElem.className = "card " + Card.getStyleClassName(card);
+        if (this.hideCards === false) {
+            cardElem.className = "card " + Card.getStyleClassName(card);
+        } else {
+            cardElem.className = "card _backside";
+        }
         this.rootElem.appendChild(cardElem);
     }
 }
@@ -84,10 +90,10 @@ class Card {
         ]);
     }
     assetName() {
-        if (cardValue != 0xffffffff) {
+        if (this.cardValue != 0xffffffff) {
             return `${this.cardName()}${this.suitName()}${this.colorName()}`;
         } else {
-            return 
+            return "backside";
         }
     }
     constructor(nameId, suitId) {
@@ -101,11 +107,14 @@ class GameState {
     playerDeckViews = {};
     playerIdTurn=0;
     playerWinner=undefined;
+    turnsTaken=0;
     startNewGame() {
         this.playerCards = {};
         this.playerIdTurn = 0;
         this.gameOver = false;
         this.playerWinner = undefined;
+        this.turnsTaken = 0;
+        gameStatusText.innerText = "Player 1's Turn";
         if (Object.keys(this.playerDeckViews).length != 0) {
             Object.values(this.playerDeckViews).forEach(e => {
                 e.clearCards();
@@ -116,45 +125,58 @@ class GameState {
         passButton.disabled = false;
     }
     playerTakeCards(playerId) {
+        console.log(`Player ${playerId} takes`);
         if (playerId == this.playerIdTurn) {
             dealCards(
                 this.playerDeckViews[
                     Object.keys(this.playerDeckViews)[this.playerIdTurn]
                 ],
                 2);
+            this.nextTurn();
         }
     }
     playerPass(playerId) {
+        console.log(`Player ${playerId} passes`);
         if (playerId == this.playerIdTurn) {
             this.nextTurn();
         }
     }
     npTurn() {
-        var result = crng() * 30;
-        if (result < 15) {  }
+        var result = Math.floor(crng() * 30);
+        if (result < 15) { this.playerTakeCards(1); }
+        else { this.playerPass(1); }
+    }
+    setPlayerIdTurn(value) {
+        this.playerIdTurn = value;
+        this.setGameStatusText(`Player ${this.playerIdTurn}'s Turn`);
     }
     nextTurn() {
         var result = this.checkWinner();
         if (result === undefined) {
-            if (this.playerIdTurn < Object.keys(playerDeckViews).length) {
-                this.playerIdTurn += 1;
-                if (playerIdTurn == 1) {
+            if (this.playerIdTurn < Object.keys(this.playerDeckViews).length) {
+                this.setPlayerIdTurn(this.playerIdTurn + 1);
+                if (this.playerIdTurn == 1) {
                     this.npTurn();    
                 }
             } else {
-                this.playerIdTurn = 0;
+                this.setPlayerIdTurn(0);
             }
         } else {
             if (result.message === undefined) {
-                alert(`${result.name} wins with a score of ${result.score}`);
+                this.setGameStatusText(`${result.name} wins with a score of ${result.score}`);
             } else {
-                alert(`${result.message}`);
+                this.setGameStatusText(`${result.message}`);
             }
-            onGameOver();
+            this.onGameOver();
         }
+        this.turnsTaken += 1;
+    }
+    setGameStatusText(value) {
+        gameStatusText.innerText = value;
     }
     onGameOver() {
         this.gameOver = true;
+        this.setGameStatusText("Game Over");
         takeButton.disabled = true;
         passButton.disabled = true;
     }
@@ -163,6 +185,8 @@ class GameState {
         var oppScore = 0;
         var highScore = 0;
         var topScoreSets = [];
+        // Ensure player and opponent get at least 1 turn
+        if (this.turnsTaken < 2) { return undefined; }
         Object.keys(this.playerCards).forEach((k,i) => {
             playerScores[i] = [0,0];
             playerScores[i][0] = k;
@@ -171,6 +195,7 @@ class GameState {
             });
         });
         var topScores = playerScores.sort((a,b)=> a[1]<b[1]);
+        var message = undefined;
         console.log(topScores);
         for (var i=0; i < topScores.length; i++) {
             if (i < topScores.length - 1) {
@@ -210,8 +235,8 @@ document.onreadystatechange = () => {
     gameState = new GameState();
     var player1Name = "Player1";
     var houseName = "House"
-    playerDeckView = new CardDeckView("#playerDeck", gameState, "Player1");
-    opponentDeckView = new CardDeckView("#opponentDeck", gameState, "House");
+    playerDeckView = new CardDeckView("#playerDeck", gameState, "Player1", false);
+    opponentDeckView = new CardDeckView("#opponentDeck", gameState, "House", true);
     gameState.playerDeckViews[player1Name] = playerDeckView;
     gameState.playerDeckViews[houseName] = opponentDeckView;
     newGameButton = $("#newGameButton");
